@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  NATIONAL_ADMIN
+  REGIONAL_OFFICER
+  MUNICIPAL_REGISTRAR
+  FIELD_AGENT
+  UNICEF_MONITOR
+  WORLD_BANK_OBSERVER
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum RecordChannel {
+  WEB
+  USSD
+  SMS
+}
+
+enum RecordStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+  CERTIFICATE_ISSUED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VALIDATE
+  REJECT
+  EXPORT
+  LOGIN
+  LOGOUT
+  GENERATE_CERTIFICATE
+}
+
+enum AgentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Region {
+  id              String   @id @default(uuid())
+  nameFr          String
+  nameEn          String
+  code            String   @unique  // e.g. CM-CE
+  monthlyTarget   Int      @default(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  users           User[]
+  agents          Agent[]
+  registrations   BirthRegistration[]
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  passwordHash    String
+  role            UserRole
+  regionId        String?
+  region          Region?   @relation(fields: [regionId], references: [id])
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  validations     BirthRegistration[] @relation("ValidatedBy")
+  certificates    Certificate[]       @relation("IssuedBy")
+  auditLogs       AuditLog[]
+}
+
+model Agent {
+  id                 String      @id @default(uuid())
+  agentCode          String      @unique  // 6-digit system-generated
+  name               String
+  phone              String
+  regionId           String
+  region             Region      @relation(fields: [regionId], references: [id])
+  district           String
+  village            String?
+  unicefCertified    Boolean     @default(false)
+  status             AgentStatus @default(ACTIVE)
+  registrationsCount Int         @default(0)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  
+  registrations      BirthRegistration[]
+  
+  @@index([regionId])
+  @@index([status])
+}
+
+model BirthRegistration {
+  id               String        @id @default(uuid())
+  referenceNumber  String        @unique  // CM-YYYY-NNNNNNN
+  childName        String
+  childSex         Sex
+  dob              DateTime
+  birthPlace       String
+  regionId         String
+  region           Region        @relation(fields: [regionId], references: [id])
+  district         String
+  village          String
+  motherName       String
+  motherPhone      String?
+  fatherName       String?
+  fatherPhone      String?
+  declarantPhone   String
+  agentId          String?
+  agent            Agent?        @relation(fields: [agentId], references: [id])
+  channel          RecordChannel @default(WEB)
+  status           RecordStatus  @default(PENDING)
+  rejectionReason  String?
+  validatedById    String?
+  validatedBy      User?         @relation("ValidatedBy", fields: [validatedById], references: [id])
+  validatedAt      DateTime?
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  certificate      Certificate?
+  auditLogs        AuditLog[]
+
+  @@index([regionId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([referenceNumber])
+  @@index([agentId])
+}
+
+model Certificate {
+  id               String            @id @default(uuid())
+  registrationId   String            @unique
+  registration     BirthRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  issuedById       String
+  issuedBy         User              @relation("IssuedBy", fields: [issuedById], references: [id])
+  issuedAt         DateTime          @default(now())
+  pdfStoragePath   String
+  qrCodeData       String
+  downloadCount    Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([registrationId])
+  @@index([issuedById])
+}
+
+model AuditLog {
+  id              String      @id @default(uuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action          AuditAction
+  targetTable     String
+  targetId        String?
+  registrationId  String?
+  registration    BirthRegistration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  oldValue        Json?
+  newValue        Json?
+  ipAddress       String?
+  userAgent       String?
+  timestamp       DateTime    @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+}

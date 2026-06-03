@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: civicbirth-config
+  namespace: civicbirth-prod
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  PORT: "3000"
+  FRONTEND_URL: "https://civicbirth.gov.cm"
+  APP_BASE_URL: "https://civicbirth.gov.cm"
+  CERTIFICATE_VERIFY_BASE_URL: "https://civicbirth.gov.cm/verify"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: civicbirth-config
+  namespace: civicbirth-dev
+data:
+  NODE_ENV: "development"
+  LOG_LEVEL: "debug"
+  PORT: "3000"
+  FRONTEND_URL: "http://localhost:5173"
+  APP_BASE_URL: "http://localhost:3000"
+  CERTIFICATE_VERIFY_BASE_URL: "http://localhost:5173/verify"

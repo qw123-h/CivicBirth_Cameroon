@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --soft-surface: #f8faf7;
+    --ink-900: #111827;
+    --ink-700: #374151;
+    --line-soft: #e5e7eb;
+  }
+
+  body {
+    @apply bg-background text-dark antialiased;
+    background-image:
+      linear-gradient(135deg, rgba(0, 132, 61, 0.06), transparent 34%),
+      linear-gradient(315deg, rgba(252, 209, 22, 0.12), transparent 36%);
+    background-attachment: fixed;
+  }
+
+  h1 {
+    @apply text-h1 font-bold font-display;
+  }
+
+  h2 {
+    @apply text-h2 font-semibold;
+  }
+
+  h3 {
+    @apply text-h3 font-semibold;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  button {
+    @apply font-medium transition-all duration-200;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-white/80 bg-card/95 p-6 shadow-sm backdrop-blur transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-lg;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .btn {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark focus:ring-primary hover:shadow-glow;
+  }
+
+  .btn-secondary {
+    @apply bg-dark text-white hover:bg-dark/90 focus:ring-dark;
+  }
+
+  .btn-ghost {
+    @apply border border-gray-200 bg-white text-dark hover:border-primary/30 hover:bg-primary/5 focus:ring-primary;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-gray-300 bg-white/95 px-4 py-2.5 text-sm shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+
+  .table-head {
+    @apply bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500;
+  }
+
+  .table-row {
+    @apply border-b border-gray-100 transition-colors hover:bg-primary/5;
+  }
+
+  .soft-panel {
+    @apply rounded-lg border border-white/80 bg-[var(--soft-surface)] shadow-sm;
+  }
+
+  .page-hero {
+    @apply relative overflow-hidden rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm md:p-6;
+  }
+
+  .page-hero::before {
+    content: "";
+    @apply absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-secondary;
+  }
+
+  .metric-card {
+    @apply card card-hover relative overflow-hidden;
+  }
+
+  .metric-card::after {
+    content: "";
+    @apply pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent;
+  }
+
+  .table-shell {
+    @apply card overflow-hidden p-0;
+  }
+
+  .table-toolbar {
+    @apply flex flex-col gap-3 border-b border-gray-100 bg-white/80 p-4 md:flex-row md:items-center md:justify-between;
+  }
+
+  .empty-state {
+    @apply flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50/80 p-8 text-center text-gray-500;
+  }
+
+  .section-title {
+    @apply text-xl md:text-2xl font-display font-semibold text-[var(--ink-900)];
+  }
+
+  .section-subtitle {
+    @apply text-sm md:text-base text-[var(--ink-700)];
+  }
+}

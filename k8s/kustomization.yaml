@@ -1,0 +1,29 @@
+---
+# Kustomization file for CivicBirth Kubernetes deployment
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- secret.yaml
+- rbac.yaml
+- postgres.yaml
+- backend.yaml
+- frontend.yaml
+- policies.yaml
+- ingress.yaml
+
+commonLabels:
+  app: civicbirth
+  managed-by: kustomize
+
+commonAnnotations:
+  managed-by: "Kubernetes Deployment"
+  deployed-date: "2026-05-07"
+
+replicas:
+- name: backend
+  count: 2
+- name: frontend
+  count: 2
