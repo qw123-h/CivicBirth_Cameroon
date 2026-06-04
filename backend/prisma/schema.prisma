@@ -63,10 +63,11 @@ model Region {
   monthlyTarget   Int      @default(100)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+   
   users           User[]
   agents          Agent[]
   registrations   BirthRegistration[]
+  alerts          Alert[]    @relation("AlertRegion")
 }
 
 model User {
@@ -81,10 +82,11 @@ model User {
   lastLoginAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+   
   validations     BirthRegistration[] @relation("ValidatedBy")
   certificates    Certificate[]       @relation("IssuedBy")
   auditLogs       AuditLog[]
+  resolvedAlerts  Alert[]       @relation("AlertResolver")
 }
 
 model Agent {
@@ -181,4 +183,23 @@ model AuditLog {
   @@index([userId])
   @@index([timestamp])
   @@index([action])
+}
+
+model Alert {
+  id              String   @id @default(uuid())
+  regionId        String
+  region          Region   @relation("AlertRegion", fields: [regionId], references: [id])
+  type            String   // e.g., REGIONAL_TARGET_MISSED
+  message         String
+  severity        String   // LOW, MEDIUM, HIGH
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime?
+  resolvedById    String?
+  resolvedBy      User?    @relation("AlertResolver", fields: [resolvedById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([regionId])
+  @@index([resolved])
+  @@index([type])
 }

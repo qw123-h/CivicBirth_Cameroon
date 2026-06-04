@@ -35,7 +35,7 @@ export const validateRegistrationSchema = z.object({
 });
 
 export const rejectRegistrationSchema = z.object({
-  reason: z.string().min(1, 'Rejection reason is required'),
+  reason: z.string().min(10, 'Rejection reason must be at least 10 characters'),
 });
 
 export const listRegistrationsQuerySchema = z.object({

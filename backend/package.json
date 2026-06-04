@@ -22,7 +22,12 @@
     "db:studio": "prisma studio",
     "prisma:generate": "prisma generate"
   },
-  "keywords": ["civicbirth", "birth-registration", "cameroon", "crvs"],
+  "keywords": [
+    "civicbirth",
+    "birth-registration",
+    "cameroon",
+    "crvs"
+  ],
   "author": "CivicBirth Team",
   "license": "MIT",
   "dependencies": {
@@ -37,8 +42,8 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.2",
-    "qrcode": "^1.5.3",
     "prisma": "^5.7.1",
+    "qrcode": "^1.5.3",
     "winston": "^3.11.0",
     "zod": "^3.22.4"
   },
@@ -50,8 +55,9 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.11",
-    "@types/qrcode": "^1.5.5",
     "@types/node": "^20.10.6",
+    "@types/node-cron": "^3.0.11",
+    "@types/qrcode": "^1.5.5",
     "@typescript-eslint/eslint-plugin": "^6.17.0",
     "@typescript-eslint/parser": "^6.17.0",
     "eslint": "^8.56.0",

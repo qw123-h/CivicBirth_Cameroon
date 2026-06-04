@@ -4,12 +4,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import cron from 'node-cron';
 
 import { config } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { logger, logInfo, logError } from './config/logger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { auditMiddleware } from './middleware/audit.middleware';
+import { alertService } from './modules/alerts';
 
 // Routes
 import authRoutes from './modules/auth/auth.routes';
@@ -18,6 +20,7 @@ import certificatesRoutes from './modules/certificates/certificates.routes';
 import agentsRoutes from './modules/agents/agents.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
 import usersRoutes from './modules/users/users.routes';
+import alertRoutes from './modules/alerts/alert.routes';
 
 const app = express();
 
@@ -71,6 +74,7 @@ app.use('/api/certificates', certificatesRoutes);
 app.use('/api/agents', agentsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/alerts', alertRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -84,20 +88,33 @@ app.use((req: Request, res: Response) => {
 // Error handler (must be last)
 app.use(errorMiddleware);
 
-// Server startup
-async function startServer() {
-  try {
-    await connectDatabase();
+    // Server startup
+    async function startServer() {
+      try {
+        await connectDatabase();
 
-    const server = app.listen(config.PORT, () => {
-      logInfo(
-        `✅ CivicBirth Backend running on http://localhost:${config.PORT}`,
-      );
-      logInfo(`🌍 CORS enabled for: ${config.FRONTEND_URL}`);
-      logInfo(`📊 Environment: ${config.NODE_ENV}`);
-    });
+        const server = app.listen(config.PORT, () => {
+          logInfo(
+            `✅ CivicBirth Backend running on http://localhost:${config.PORT}`,
+          );
+          logInfo(`🌍 CORS enabled for: ${config.FRONTEND_URL}`);
+          logInfo(`📊 Environment: ${config.NODE_ENV}`);
+        });
 
-    // Graceful shutdown
+        // Schedule daily regional target check at 9:00 AM
+        cron.schedule('0 9 * * *', async () => {
+          logInfo('⏰ Running scheduled regional target check');
+          try {
+            await alertService.checkRegionalTargets();
+            logInfo('✅ Scheduled regional target check completed');
+          } catch (error) {
+            logError('❌ Scheduled regional target check failed', error as Error);
+          }
+        }, {
+          timezone: 'Africa/Douala' // Cameroon timezone
+        });
+
+        // Graceful shutdown
     process.on('SIGTERM', async () => {
       logInfo('📍 SIGTERM signal received: closing HTTP server');
       server.close(async () => {

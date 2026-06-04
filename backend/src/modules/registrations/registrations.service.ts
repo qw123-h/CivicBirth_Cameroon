@@ -32,49 +32,66 @@ export class RegistrationsService extends BaseService {
       throw new AppError(400, 'Invalid region ID');
     }
 
-    // If agent is specified, verify it exists
-    if (data.agentId) {
-      const agent = await this.prisma.agent.findUnique({
-        where: { id: data.agentId },
-      });
+     // If agent is specified, verify it exists and is active
+     if (data.agentId) {
+       const agent = await this.prisma.agent.findUnique({
+         where: { id: data.agentId },
+       });
 
-      if (!agent) {
-        throw new AppError(400, 'Invalid agent ID');
-      }
-    }
+       if (!agent) {
+         throw new AppError(400, 'Invalid agent ID');
+       }
 
-    const referenceNumber = await generateReferenceNumber();
+       // Check if agent is active
+       if (agent.status !== 'ACTIVE') {
+         throw new AppError(403, 'Agent is not active and cannot submit registrations');
+       }
+     }
 
-    const registration = await this.prisma.birthRegistration.create({
-      data: {
-        referenceNumber,
-        childName: data.childName,
-        childSex: data.childSex,
-        dob: new Date(data.dob),
-        birthPlace: data.birthPlace,
-        regionId: data.regionId,
-        district: data.district,
-        village: data.village,
-        motherName: data.motherName,
-        motherPhone: data.motherPhone,
-        fatherName: data.fatherName,
-        fatherPhone: data.fatherPhone,
-        declarantPhone: data.declarantPhone,
-        agentId: data.agentId,
-        channel: data.channel,
-        status: 'PENDING',
-        notes: data.notes,
-      },
-      include: {
-        region: true,
-        agent: true,
-        validatedBy: true,
-      },
-    });
+     const referenceNumber = await generateReferenceNumber();
 
-    logInfo(`Birth registration created: ${referenceNumber} by user ${userId}`);
+     // Check if this is a late registration (older than 1 year)
+     const dob = new Date(data.dob);
+     const oneYearAgo = new Date();
+     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+     
+     const isLateRegistration = dob < oneYearAgo;
 
-    return registration;
+     const registration = await this.prisma.birthRegistration.create({
+       data: {
+         referenceNumber,
+         childName: data.childName,
+         childSex: data.childSex,
+         dob: dob,
+         birthPlace: data.birthPlace,
+         regionId: data.regionId,
+         district: data.district,
+         village: data.village,
+         motherName: data.motherName,
+         motherPhone: data.motherPhone,
+         fatherName: data.fatherName,
+         fatherPhone: data.fatherPhone,
+         declarantPhone: data.declarantPhone,
+         agentId: data.agentId,
+         channel: data.channel,
+         status: 'PENDING',
+         notes: data.notes,
+       },
+       include: {
+         region: true,
+         agent: true,
+         validatedBy: true,
+       },
+     });
+
+     // Log if this is a late registration for special review
+     if (isLateRegistration) {
+       logInfo(`Late registration detected: ${referenceNumber} (child DOB: ${data.dob})`);
+     }
+
+     logInfo(`Birth registration created: ${referenceNumber} by user ${userId}`);
+
+     return registration;
   }
 
   async listRegistrations(
