@@ -9,7 +9,7 @@ COPY frontend/package*.json ./
 # Install dependencies (use npm install when lockfile may be missing)
 RUN npm install --no-audit --no-fund --legacy-peer-deps
 
-# Copy source code
+# Copy source code and configs
 COPY frontend/src ./src
 COPY frontend/public ./public
 COPY frontend/index.html .
@@ -17,6 +17,11 @@ COPY frontend/vite.config.ts .
 COPY frontend/tsconfig.json .
 COPY frontend/tsconfig.node.json .
 COPY frontend/tailwind.config.ts .
+COPY frontend/postcss.config.cjs .
+
+# Compile Tailwind CSS using tailwindcss CLI before Vite build
+# This ensures all @tailwind directives are processed into actual CSS
+RUN npx tailwindcss -i ./src/index.css -o ./src/index.css --minify
 
 # Build application
 RUN npm run build
