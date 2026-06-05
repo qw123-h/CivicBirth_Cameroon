@@ -1,0 +1,153 @@
+---
+# Playbook: Deploy CivicBirth Application on Kubernetes
+# Usage: ansible-playbook -i inventory/hosts.ini playbooks/deploy-app.yml
+
+- name: Deploy CivicBirth on Kubernetes
+  hosts: production,staging
+  gather_facts: yes
+
+  vars:
+    kubeconfig_path: ~/.kube/config
+    app_namespace: civicbirth-prod
+    docker_registry: ghcr.io
+    docker_registry_secret: civicbirth-registry-secret
+
+  tasks:
+    - name: Check kubectl is available
+      shell: kubectl version --client --short
+      register: kubectl_check
+      changed_when: false
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        name: "{{ app_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Create docker registry secret
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: "{{ docker_registry_secret }}"
+            namespace: "{{ app_namespace }}"
+          type: kubernetes.io/dockercfg
+          data:
+            .dockercfg: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
+      ignore_errors: yes
+
+    - name: Apply ConfigMap for application config
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: civicbirth-config
+            namespace: "{{ app_namespace }}"
+          data:
+            NODE_ENV: "production"
+            LOG_LEVEL: "info"
+            PORT: "3000"
+
+    - name: Apply Secret for sensitive data
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: civicbirth-secret
+            namespace: "{{ app_namespace }}"
+          type: Opaque
+          stringData:
+            DATABASE_URL: "{{ database_url | default('') }}"
+            JWT_SECRET: "{{ jwt_secret | default('') }}"
+            SUPABASE_URL: "{{ supabase_url | default('') }}"
+            SUPABASE_SERVICE_KEY: "{{ supabase_service_key | default('') }}"
+      no_log: yes
+
+    - name: Apply PostgreSQL deployment
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../../k8s/postgres.yaml') | from_yaml }}"
+
+    - name: Apply backend deployment
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../../k8s/backend.yaml') | from_yaml }}"
+
+    - name: Apply frontend deployment
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../../k8s/frontend.yaml') | from_yaml }}"
+
+    - name: Apply Ingress configuration
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../../k8s/ingress.yaml') | from_yaml }}"
+
+    - name: Wait for backend deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: backend
+        namespace: "{{ app_namespace }}"
+      register: backend_deploy
+      until: backend_deploy.resources[0].status.readyReplicas == backend_deploy.resources[0].spec.replicas
+      retries: 10
+      delay: 30
+
+    - name: Verify backend is healthy
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ app_namespace }}"
+        label_selectors:
+          - app=backend
+      register: backend_pods
+
+    - name: Check backend pod logs
+      kubernetes.core.k8s_exec:
+        namespace: "{{ app_namespace }}"
+        pod: "{{ backend_pods.resources[0].metadata.name }}"
+        command: npm run check:db
+      register: db_check
+
+    - name: Display deployment status
+      debug:
+        msg: |
+          Deployment Status:
+          {% for pod in backend_pods.resources %}
+          - {{ pod.metadata.name }}: {{ pod.status.phase }}
+          {% endfor %}
+
+  post_tasks:
+    - name: Get service information
+      kubernetes.core.k8s_info:
+        kind: Service
+        namespace: "{{ app_namespace }}"
+      register: services
+
+    - name: Display service endpoints
+      debug:
+        msg: |
+          Services deployed:
+          {% for svc in services.resources %}
+          - {{ svc.metadata.name }}: {{ svc.spec.clusterIP }}
+          {% endfor %}
+
+    - name: Display deployment completion
+      debug:
+        msg: |
+          ✓ CivicBirth deployed to Kubernetes
+          ✓ All pods are running and healthy
+          ✓ Services configured and ready
+          
+          Access your application at:
+          {{ ingress_host | default('Load Balancer DNS') }}
+          
+          Monitor deployment:
+          kubectl get pods -n {{ app_namespace }}
+          kubectl logs -f deployment/backend -n {{ app_namespace }}

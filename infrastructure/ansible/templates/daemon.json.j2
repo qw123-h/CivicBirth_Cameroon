@@ -1,0 +1,25 @@
+# Docker daemon configuration template for Ansible
+
+{
+  "debug": false,
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3",
+    "labels": "com.example.vendor=CivicBirth"
+  },
+  "storage-driver": "overlay2",
+  "icc": false,
+  "default-ulimits": {
+    "nofile": {
+      "Name": "nofile",
+      "Hard": 65536,
+      "Soft": 65536
+    }
+  },
+  "live-restore": true,
+  "userland-proxy": false,
+  "seccomp-profile": "/etc/docker/seccomp.json",
+  "insecure-registries": [],
+  "registry-mirrors": []
+}
