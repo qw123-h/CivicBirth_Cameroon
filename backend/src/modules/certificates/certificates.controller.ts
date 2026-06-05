@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { certificatesService } from './certificates.service';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { asyncHandler } from '../../middleware/error.middleware';
+import { prisma } from '../../config/database';
 
 export class CertificatesController {
   generateCertificate = asyncHandler(
@@ -16,6 +17,21 @@ export class CertificatesController {
         registrationId,
         req.user.id,
       );
+
+      // Rule 7: Immutable audit trail — log certificate generation
+      prisma.auditLog
+        .create({
+          data: {
+            userId: req.user.id,
+            action: 'GENERATE_CERTIFICATE',
+            targetTable: 'certificate',
+            targetId: certificate.id,
+            registrationId,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+          },
+        })
+        .catch(() => {});
 
       res.status(201).json(certificate);
     },

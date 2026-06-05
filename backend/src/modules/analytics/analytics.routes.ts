@@ -3,6 +3,7 @@ import { analyticsController } from './analytics.controller';
 import {
   authMiddleware,
   requireAuth,
+  requireRole,
 } from '../../middleware/auth.middleware';
 
 const router = Router();
@@ -31,7 +32,7 @@ router.get(
 router.get(
   '/sdg-tracker',
   authMiddleware,
-  requireAuth,
+  requireRole('NATIONAL_ADMIN', 'UNICEF_MONITOR', 'WORLD_BANK_OBSERVER'),
   analyticsController.getSDGTracker,
 );
 

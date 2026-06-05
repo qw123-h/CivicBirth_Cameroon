@@ -101,6 +101,8 @@ model Agent {
   unicefCertified    Boolean     @default(false)
   status             AgentStatus @default(ACTIVE)
   registrationsCount Int         @default(0)
+  email              String?     @unique
+  passwordHash       String?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   
@@ -111,35 +113,36 @@ model Agent {
 }
 
 model BirthRegistration {
-  id               String        @id @default(uuid())
-  referenceNumber  String        @unique  // CM-YYYY-NNNNNNN
-  childName        String
-  childSex         Sex
-  dob              DateTime
-  birthPlace       String
-  regionId         String
-  region           Region        @relation(fields: [regionId], references: [id])
-  district         String
-  village          String
-  motherName       String
-  motherPhone      String?
-  fatherName       String?
-  fatherPhone      String?
-  declarantPhone   String
-  agentId          String?
-  agent            Agent?        @relation(fields: [agentId], references: [id])
-  channel          RecordChannel @default(WEB)
-  status           RecordStatus  @default(PENDING)
-  rejectionReason  String?
-  validatedById    String?
-  validatedBy      User?         @relation("ValidatedBy", fields: [validatedById], references: [id])
-  validatedAt      DateTime?
-  notes            String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  referenceNumber   String        @unique  // CM-YYYY-NNNNNNN
+  childName         String
+  childSex          Sex
+  dob               DateTime
+  isLateRegistration Boolean      @default(false)
+  birthPlace        String
+  regionId          String
+  region            Region        @relation(fields: [regionId], references: [id])
+  district          String
+  village           String
+  motherName        String
+  motherPhone       String?
+  fatherName        String?
+  fatherPhone       String?
+  declarantPhone    String
+  agentId           String?
+  agent             Agent?        @relation(fields: [agentId], references: [id])
+  channel           RecordChannel @default(WEB)
+  status            RecordStatus  @default(PENDING)
+  rejectionReason   String?
+  validatedById     String?
+  validatedBy       User?         @relation("ValidatedBy", fields: [validatedById], references: [id])
+  validatedAt       DateTime?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   
-  certificate      Certificate?
-  auditLogs        AuditLog[]
+  certificate       Certificate?
+  auditLogs         AuditLog[]
 
   @@index([regionId])
   @@index([status])

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { registrationsService } from './registrations.service';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { asyncHandler } from '../../middleware/error.middleware';
-import { CreateRegistrationInput, UpdateRegistrationInput } from './registrations.schema';
+import { CreateRegistrationInput, UpdateRegistrationInput, EditRegistrationInput } from './registrations.schema';
 
 export class RegistrationsController {
   createRegistration = asyncHandler(
@@ -43,8 +43,17 @@ export class RegistrationsController {
 
   getRegistration = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
       const { id } = req.params;
-      const registration = await registrationsService.getRegistration(id);
+      const registration = await registrationsService.getRegistration(
+        id,
+        req.user.id,
+        req.user.role,
+        req.user.regionId,
+      );
 
       res.status(200).json(registration);
     },
@@ -80,6 +89,39 @@ export class RegistrationsController {
       const registration = await registrationsService.rejectRegistration(
         id,
         reason,
+        req.user.id,
+      );
+
+      res.status(200).json(registration);
+    },
+  );
+
+  resubmitRegistration = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const { id } = req.params;
+      const registration = await registrationsService.resubmitRegistration(id);
+
+      res.status(200).json(registration);
+    },
+  );
+
+  updateRegistration = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const { id } = req.params;
+      const data = req.body;
+      const registration = await registrationsService.updateRegistration(
+        id,
+        data,
         req.user.id,
       );
 

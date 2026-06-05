@@ -29,10 +29,14 @@ const updateAgentSchema = z.object({
   unicefCertified: z.boolean().optional(),
 });
 
+const updateAgentStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']),
+});
+
 router.post(
   '/',
   authMiddleware,
-  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER'),
+  requireRole('NATIONAL_ADMIN'),
   validateBody(createAgentSchema),
   agentsController.createAgent,
 );
@@ -40,7 +44,15 @@ router.post(
 router.get(
   '/',
   authMiddleware,
+  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'UNICEF_MONITOR'),
   agentsController.listAgents,
+);
+
+router.get(
+  '/me/performance',
+  authMiddleware,
+  requireRole('FIELD_AGENT'),
+  agentsController.getMyPerformance,
 );
 
 router.get(
@@ -53,6 +65,7 @@ router.get(
 router.get(
   '/:id/performance',
   authMiddleware,
+  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER'),
   validateParams(paramIdSchema),
   agentsController.getAgentPerformance,
 );
@@ -60,7 +73,7 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware,
-  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER'),
+  requireRole('MUNICIPAL_REGISTRAR'),
   validateParams(paramIdSchema),
   validateBody(updateAgentSchema),
   agentsController.updateAgent,
@@ -69,9 +82,26 @@ router.patch(
 router.patch(
   '/:id/deactivate',
   authMiddleware,
-  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER'),
+  requireRole('MUNICIPAL_REGISTRAR'),
   validateParams(paramIdSchema),
   agentsController.deactivateAgent,
+);
+
+router.patch(
+  '/:id/status',
+  authMiddleware,
+  requireRole('MUNICIPAL_REGISTRAR'),
+  validateParams(paramIdSchema),
+  validateBody(updateAgentStatusSchema),
+  agentsController.updateAgentStatus,
+);
+
+router.post(
+  '/:id/reset-password',
+  authMiddleware,
+  requireRole('MUNICIPAL_REGISTRAR'),
+  validateParams(paramIdSchema),
+  agentsController.resetAgentPassword,
 );
 
 export default router;

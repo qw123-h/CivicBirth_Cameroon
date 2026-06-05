@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { AuthProvider } from './providers/AuthProvider';
+import { UserRole } from './types';
 
 // Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -16,6 +17,7 @@ import NewRegistrationPage from './pages/registrations/NewRegistrationPage';
 import CertificatesPage from './pages/certificates/CertificatesPage';
 import AnalyticsPage from './pages/analytics/AnalyticsPage';
 import AgentsPage from './pages/agents/AgentsPage';
+import AgentWorkspacePage from './pages/agents/AgentWorkspacePage';
 import SettingsPage from './pages/settings/SettingsPage';
 import VerifyPage from './pages/public/VerifyPage';
 
@@ -28,8 +30,49 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
-  return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+  const { isAuthenticated, user } = useAuthStore();
+  return !isAuthenticated ? <>{children}</> : <Navigate to={getRoleHome(user?.role)} replace />;
+}
+
+function AuthorizedRoute({
+  children,
+  roles,
+}: {
+  children: React.ReactNode;
+  roles: UserRole[];
+}) {
+  const { user } = useAuthStore();
+
+  if (!user?.role || !roles.includes(user.role)) {
+    return <Navigate to={getRoleHome(user?.role)} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function RoleHomeRedirect() {
+  const { user } = useAuthStore();
+  return <Navigate to={getRoleHome(user?.role)} replace />;
+}
+
+function AppFallback() {
+  const { isAuthenticated, user } = useAuthStore();
+  return <Navigate to={isAuthenticated ? getRoleHome(user?.role) : '/login'} replace />;
+}
+
+function getRoleHome(role?: UserRole | string) {
+  switch (role) {
+    case UserRole.FIELD_AGENT:
+      return '/agent-workspace';
+    case UserRole.MUNICIPAL_REGISTRAR:
+      return '/registrations';
+    case UserRole.REGIONAL_OFFICER:
+    case UserRole.NATIONAL_ADMIN:
+    case UserRole.UNICEF_MONITOR:
+    case UserRole.WORLD_BANK_OBSERVER:
+    default:
+      return '/dashboard';
+  }
 }
 
 export default function App() {
@@ -57,18 +100,103 @@ export default function App() {
               </PrivateRoute>
             }
           >
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="registrations" element={<BirthRecordsPage />} />
-            <Route path="registrations/new" element={<NewRegistrationPage />} />
-            <Route path="certificates" element={<CertificatesPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="agents" element={<AgentsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route
+              path="dashboard"
+              element={
+                <AuthorizedRoute roles={[
+                  UserRole.NATIONAL_ADMIN,
+                  UserRole.REGIONAL_OFFICER,
+                  UserRole.MUNICIPAL_REGISTRAR,
+                  UserRole.UNICEF_MONITOR,
+                  UserRole.WORLD_BANK_OBSERVER,
+                ]}>
+                  <DashboardPage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route
+              path="registrations"
+              element={
+                <AuthorizedRoute roles={[
+                  UserRole.NATIONAL_ADMIN,
+                  UserRole.REGIONAL_OFFICER,
+                  UserRole.MUNICIPAL_REGISTRAR,
+                  UserRole.UNICEF_MONITOR,
+                ]}>
+                  <BirthRecordsPage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route
+              path="registrations/new"
+              element={
+                <AuthorizedRoute roles={[
+                  UserRole.NATIONAL_ADMIN,
+                  UserRole.MUNICIPAL_REGISTRAR,
+                  UserRole.FIELD_AGENT,
+                ]}>
+                  <NewRegistrationPage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route
+              path="certificates"
+              element={
+                <AuthorizedRoute roles={[
+                  UserRole.NATIONAL_ADMIN,
+                  UserRole.REGIONAL_OFFICER,
+                  UserRole.MUNICIPAL_REGISTRAR,
+                  UserRole.UNICEF_MONITOR,
+                ]}>
+                  <CertificatesPage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route
+              path="analytics"
+              element={
+                <AuthorizedRoute roles={[
+                  UserRole.NATIONAL_ADMIN,
+                  UserRole.REGIONAL_OFFICER,
+                  UserRole.MUNICIPAL_REGISTRAR,
+                  UserRole.UNICEF_MONITOR,
+                  UserRole.WORLD_BANK_OBSERVER,
+                ]}>
+                  <AnalyticsPage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route
+              path="agents"
+              element={
+                <AuthorizedRoute roles={[
+                  UserRole.NATIONAL_ADMIN,
+                  UserRole.REGIONAL_OFFICER,
+                  UserRole.MUNICIPAL_REGISTRAR,
+                  UserRole.UNICEF_MONITOR,
+                ]}>
+                  <AgentsPage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route
+              path="agent-workspace"
+              element={
+                <AuthorizedRoute roles={[UserRole.FIELD_AGENT]}>
+                  <AgentWorkspacePage />
+                </AuthorizedRoute>
+              }
+            />
+            <Route path="settings" element={
+              <AuthorizedRoute roles={[UserRole.NATIONAL_ADMIN]}>
+                <SettingsPage />
+              </AuthorizedRoute>
+            } />
+            <Route index element={<RoleHomeRedirect />} />
           </Route>
 
           {/* 404 */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<AppFallback />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

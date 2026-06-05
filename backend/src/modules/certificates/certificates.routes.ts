@@ -29,7 +29,7 @@ router.post(
 router.get(
   '/',
   authMiddleware,
-  requireAuth,
+  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'),
   certificatesController.listCertificates,
 );
 
@@ -44,7 +44,7 @@ router.get(
 router.get(
   '/:id/download',
   authMiddleware,
-  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR'),
+  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'),
   validateParams(paramIdSchema),
   certificatesController.downloadCertificate,
 );

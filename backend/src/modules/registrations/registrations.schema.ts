@@ -30,6 +30,19 @@ export const updateRegistrationSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const editRegistrationSchema = z.object({
+  childName: z.string().min(1).optional(),
+  motherName: z.string().min(1).optional(),
+  motherPhone: z.string().optional(),
+  fatherName: z.string().optional(),
+  fatherPhone: z.string().optional(),
+  declarantPhone: z.string().optional(),
+  notes: z.string().optional(),
+  birthPlace: z.string().optional(),
+  district: z.string().optional(),
+  village: z.string().optional(),
+});
+
 export const validateRegistrationSchema = z.object({
   id: z.string().uuid(),
 });
@@ -52,4 +65,5 @@ export const listRegistrationsQuerySchema = z.object({
 
 export type CreateRegistrationInput = z.infer<typeof createRegistrationSchema>;
 export type UpdateRegistrationInput = z.infer<typeof updateRegistrationSchema>;
+export type EditRegistrationInput = z.infer<typeof editRegistrationSchema>;
 export type ListRegistrationsQuery = z.infer<typeof listRegistrationsQuerySchema>;

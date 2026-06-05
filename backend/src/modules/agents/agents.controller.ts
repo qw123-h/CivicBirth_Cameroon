@@ -46,11 +46,30 @@ export class AgentsController {
     },
   );
 
-  deactivateAgent = asyncHandler(
+deactivateAgent = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;
 
       const agent = await agentsService.deactivateAgent(id);
+
+      res.status(200).json(agent);
+    },
+  );
+
+  resetAgentPassword = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const { id } = req.params;
+      const result = await agentsService.generateNewPassword(id);
+      res.status(200).json(result);
+    },
+  );
+
+  updateAgentStatus = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const agent = await agentsService.updateAgentStatus(id, status);
 
       res.status(200).json(agent);
     },
@@ -61,6 +80,16 @@ export class AgentsController {
       const { id } = req.params;
 
       const result = await agentsService.getAgentPerformance(id);
+
+      res.status(200).json(result);
+    },
+  );
+
+  getMyPerformance = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const userId = req.user!.id;
+
+      const result = await agentsService.getMyPerformance(userId);
 
       res.status(200).json(result);
     },

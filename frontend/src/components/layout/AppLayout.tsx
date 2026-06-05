@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Bell,
   Search,
+  Radio,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { motion } from 'framer-motion';
@@ -26,13 +27,14 @@ export default function AppLayout() {
   const location = useLocation();
 
   const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/registrations', icon: FileText, label: 'Birth Records' },
-    { path: '/registrations/new', icon: PlusCircle, label: 'New Registration' },
-    { path: '/certificates', icon: Award, label: 'Certificates' },
-    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-    { path: '/agents', icon: Users, label: 'Agents', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER'] },
-    { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR', 'WORLD_BANK_OBSERVER'] },
+    { path: '/registrations', icon: FileText, label: 'Birth Records', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },
+    { path: '/registrations/new', icon: PlusCircle, label: 'New Registration', requiredRoles: ['NATIONAL_ADMIN', 'MUNICIPAL_REGISTRAR', 'FIELD_AGENT'] },
+    { path: '/agent-workspace', icon: Radio, label: 'Agent Tasks', requiredRoles: ['FIELD_AGENT'] },
+    { path: '/certificates', icon: Award, label: 'Certificates', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR', 'WORLD_BANK_OBSERVER'] },
+    { path: '/agents', icon: Users, label: 'Agents', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },
+    { path: '/settings', icon: Settings, label: 'Settings', requiredRoles: ['NATIONAL_ADMIN'] },
   ];
 
   const handleLogout = () => {

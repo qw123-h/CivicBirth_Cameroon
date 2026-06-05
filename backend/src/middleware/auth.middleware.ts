@@ -29,11 +29,42 @@ export async function authMiddleware(
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as {
       id: string;
-      email: string;
-      role: string;
-      regionId: string | null;
+      email?: string;
+      role?: string;
+      regionId?: string | null;
+      source?: string;
     };
 
+    // Handle agent tokens (source === 'agent')
+    if (decoded.source === 'agent') {
+      const agent = await prisma.agent.findUnique({
+        where: { id: decoded.id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          regionId: true,
+          status: true,
+        },
+      });
+
+      if (!agent || agent.status !== 'ACTIVE') {
+        return res.status(401).json({ error: 'Agent not found or inactive' });
+      }
+
+      (req as any).authSource = 'agent';
+      req.user = {
+        id: agent.id,
+        email: agent.email || '',
+        role: 'FIELD_AGENT',
+        regionId: agent.regionId,
+      };
+      logDebug(`Agent authenticated: ${agent.email}`);
+      next();
+      return;
+    }
+
+    // Standard user token
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: {
@@ -49,6 +80,7 @@ export async function authMiddleware(
       return res.status(401).json({ error: 'User not found or inactive' });
     }
 
+    (req as any).authSource = 'user';
     req.user = user as any;
     logDebug(`User authenticated: ${user.email}`);
     next();

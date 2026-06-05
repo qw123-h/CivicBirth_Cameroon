@@ -2,7 +2,7 @@ import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error.middleware';
 import {
   CreateRegistrationInput,
-  UpdateRegistrationInput,
+  EditRegistrationInput,
   ListRegistrationsQuery,
 } from './registrations.schema';
 import { generateReferenceNumber } from '../../utils/referenceNumber';
@@ -23,6 +23,19 @@ export class RegistrationsService extends BaseService {
     data: CreateRegistrationInput,
     userId: string,
   ) {
+    // Check for duplicate registration
+    const existing = await this.prisma.birthRegistration.findFirst({
+      where: {
+        childName: data.childName,
+        dob: new Date(data.dob),
+        motherName: data.motherName,
+      },
+    });
+
+    if (existing) {
+      throw new AppError(409, 'A registration with the same child name, date of birth, and mother name already exists');
+    }
+
     // Verify region exists
     const region = await this.prisma.region.findUnique({
       where: { id: data.regionId },
@@ -63,6 +76,7 @@ export class RegistrationsService extends BaseService {
          childName: data.childName,
          childSex: data.childSex,
          dob: dob,
+         isLateRegistration,
          birthPlace: data.birthPlace,
          regionId: data.regionId,
          district: data.district,
@@ -100,6 +114,11 @@ export class RegistrationsService extends BaseService {
     userRole: string,
     userRegionId: string | null,
   ) {
+    // WORLD_BANK_OBSERVER cannot view individual records
+    if (userRole === 'WORLD_BANK_OBSERVER') {
+      return createPaginatedResponse([], 1, 25, 0);
+    }
+
     const { page, limit } = parsePagination(query.page, query.limit);
 
     const where: any = {};
@@ -164,7 +183,12 @@ export class RegistrationsService extends BaseService {
     return createPaginatedResponse(registrations, page, limit, total);
   }
 
-  async getRegistration(id: string) {
+  async getRegistration(id: string, userId?: string, userRole?: string, userRegionId?: string | null) {
+    // WORLD_BANK_OBSERVER cannot view individual records
+    if (userRole === 'WORLD_BANK_OBSERVER') {
+      throw new AppError(403, 'Access denied');
+    }
+
     const registration = await this.prisma.birthRegistration.findUnique({
       where: { id },
       include: {
@@ -180,7 +204,62 @@ export class RegistrationsService extends BaseService {
       throw new AppError(404, 'Registration not found');
     }
 
+    // Rule 3: Role-based data access enforcement
+    if (userRole === 'FIELD_AGENT') {
+      if (registration.agentId !== userId) {
+        throw new AppError(403, 'You can only view your own registrations');
+      }
+    } else if (userRole === 'REGIONAL_OFFICER' || userRole === 'MUNICIPAL_REGISTRAR') {
+      if (registration.regionId !== userRegionId) {
+        throw new AppError(403, 'You can only view registrations in your assigned region');
+      }
+    }
+    // NATIONAL_ADMIN, UNICEF_MONITOR, WORLD_BANK_OBSERVER: no restriction
+
     return registration;
+  }
+
+  async updateRegistration(id: string, data: EditRegistrationInput, userId: string) {
+    // Check registration exists
+    const registration = await this.prisma.birthRegistration.findUnique({
+      where: { id },
+    });
+
+    if (!registration) {
+      throw new AppError(404, 'Registration not found');
+    }
+
+    // Check status is PENDING
+    if (registration.status !== 'PENDING') {
+      throw new AppError(400, 'Cannot edit a non-pending record');
+    }
+
+    // Update only allowed fields
+    const updateData: any = {};
+    if (data.childName !== undefined) updateData.childName = data.childName;
+    if (data.motherName !== undefined) updateData.motherName = data.motherName;
+    if (data.motherPhone !== undefined) updateData.motherPhone = data.motherPhone;
+    if (data.fatherName !== undefined) updateData.fatherName = data.fatherName;
+    if (data.fatherPhone !== undefined) updateData.fatherPhone = data.fatherPhone;
+    if (data.declarantPhone !== undefined) updateData.declarantPhone = data.declarantPhone;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.birthPlace !== undefined) updateData.birthPlace = data.birthPlace;
+    if (data.district !== undefined) updateData.district = data.district;
+    if (data.village !== undefined) updateData.village = data.village;
+
+    const updated = await this.prisma.birthRegistration.update({
+      where: { id },
+      data: updateData,
+      include: {
+        region: true,
+        agent: true,
+        validatedBy: true,
+      },
+    });
+
+    logInfo(`Birth registration updated: ${id} by user ${userId}`);
+
+    return updated;
   }
 
   async validateRegistration(id: string, userId: string) {
@@ -252,6 +331,40 @@ export class RegistrationsService extends BaseService {
     });
 
     logInfo(`Birth registration rejected: ${id} by user ${userId}`);
+
+    return updated;
+  }
+
+  async resubmitRegistration(id: string) {
+    const registration = await this.prisma.birthRegistration.findUnique({
+      where: { id },
+    });
+
+    if (!registration) {
+      throw new AppError(404, 'Registration not found');
+    }
+
+    if (registration.status !== 'REJECTED') {
+      throw new AppError(
+        400,
+        `Cannot resubmit registration with status: ${registration.status}. Only REJECTED registrations can be resubmitted.`,
+      );
+    }
+
+    const updated = await this.prisma.birthRegistration.update({
+      where: { id },
+      data: {
+        status: 'PENDING',
+        rejectionReason: null,
+      },
+      include: {
+        region: true,
+        agent: true,
+        validatedBy: true,
+      },
+    });
+
+    logInfo(`Birth registration resubmitted: ${id}`);
 
     return updated;
   }

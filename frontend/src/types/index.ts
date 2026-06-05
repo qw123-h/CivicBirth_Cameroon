@@ -78,11 +78,17 @@ export interface Agent {
   agentCode: string;
   name: string;
   phone: string;
+  regionId: string;
   region: Region;
   district: string;
   village?: string;
   unicefCertified: boolean;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   registrationsCount: number;
+  _count?: {
+    registrations: number;
+  };
+  tempPassword?: string;
 }
 
 export interface Analytics {

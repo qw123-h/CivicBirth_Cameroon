@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { UserRole } from '../../types';
 
 export default function LoginPage() {
   useTranslation();
@@ -27,6 +28,7 @@ export default function LoginPage() {
     { email: 'admin@civicbirth.cm', password: 'Admin@2026!', role: 'National Admin' },
     { email: 'officer@civicbirth.cm', password: 'Officer@2026!', role: 'Regional Officer' },
     { email: 'registrar@civicbirth.cm', password: 'Registrar@2026!', role: 'Municipal Registrar' },
+    { email: 'agent@civicbirth.cm', password: 'Agent@2026!', role: 'Field Agent' },
   ];
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,7 +42,7 @@ export default function LoginPage() {
 
       setUser(user);
       setTokens(accessToken, refreshToken);
-      navigate('/dashboard');
+      navigate(getRoleHome(user.role));
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {
@@ -96,7 +98,7 @@ export default function LoginPage() {
           >
             <SignalCard icon={Building2} label="Coverage" value="62%" />
             <SignalCard icon={Landmark} label="Regions" value="10" />
-            <SignalCard icon={CircleUserRound} label="Demo roles" value="3" />
+            <SignalCard icon={CircleUserRound} label="Demo roles" value="4" />
           </motion.div>
 
           <div className="relative rounded-lg border border-white/10 bg-white/[0.06] p-4 text-sm text-white/72">
@@ -199,6 +201,17 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+function getRoleHome(role: UserRole | string) {
+  switch (role) {
+    case UserRole.FIELD_AGENT:
+      return '/agent-workspace';
+    case UserRole.MUNICIPAL_REGISTRAR:
+      return '/agents';
+    default:
+      return '/dashboard';
+  }
 }
 
 interface SignalCardProps {

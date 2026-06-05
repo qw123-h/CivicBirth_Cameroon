@@ -8,6 +8,7 @@ import {
 import { validateBody, validateParams, validateQuery } from '../../middleware/validate.middleware';
 import {
   createRegistrationSchema,
+  editRegistrationSchema,
   rejectRegistrationSchema,
   listRegistrationsQuerySchema,
 } from './registrations.schema';
@@ -63,6 +64,23 @@ router.patch(
   validateParams(paramIdSchema),
   validateBody(rejectRegistrationSchema),
   registrationsController.rejectRegistration,
+);
+
+router.patch(
+  '/:id/resubmit',
+  authMiddleware,
+  requireRole('NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'FIELD_AGENT'),
+  validateParams(paramIdSchema),
+  registrationsController.resubmitRegistration,
+);
+
+router.patch(
+  '/:id',
+  authMiddleware,
+  requireRole('NATIONAL_ADMIN', 'MUNICIPAL_REGISTRAR', 'FIELD_AGENT'),
+  validateParams(paramIdSchema),
+  validateBody(editRegistrationSchema),
+  registrationsController.updateRegistration,
 );
 
 // Public route - no authentication

@@ -197,12 +197,29 @@ async function main() {
     'Musa Ibrahim',
     'Anaya Diallo',
   ];
+  const agentStatuses = [
+    'ACTIVE',
+    'ACTIVE',
+    'INACTIVE',
+    'ACTIVE',
+    'SUSPENDED',
+    'ACTIVE',
+    'ACTIVE',
+    'INACTIVE',
+    'ACTIVE',
+    'ACTIVE',
+  ] as const;
 
   const agents = await Promise.all(
     agentNames.map((name, index) =>
       prisma.agent.upsert({
         where: { agentCode: String(index + 1).padStart(6, '0') },
-        update: {},
+        update: {
+          status: agentStatuses[index],
+          regionId: regions[index % regions.length].id,
+          district: 'District Central',
+          village: 'Village Test',
+        },
         create: {
           agentCode: String(index + 1).padStart(6, '0'),
           name,
@@ -213,12 +230,13 @@ async function main() {
           district: 'District Central',
           village: 'Village Test',
           unicefCertified: Math.random() > 0.5,
+          status: agentStatuses[index],
         },
       }),
     ),
   );
 
-  console.log(`✅ Created ${agents.length} agents`);
+  console.log(`✅ Created/updated ${agents.length} demo agents with active, inactive, and suspended statuses`);
 
   // Create sample birth registrations
   const registrations = [];
