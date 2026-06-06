@@ -94,21 +94,24 @@ pipeline {
         }
 
         stage('Load into Kubernetes') {
-            steps {
-                sh '''
-                    docker save civicbirth-backend:latest | microk8s ctr image import -
-                    docker save civicbirth-frontend:latest | microk8s ctr image import -
-                    microk8s kubectl apply -f ${APP_DIR}/k8s/namespace.yaml
-                    microk8s kubectl apply -f ${APP_DIR}/k8s/configmap.yaml || true
-                    microk8s kubectl apply -f ${APP_DIR}/k8s/secret.yaml || true
-                    microk8s kubectl apply -f ${APP_DIR}/k8s/postgres.yaml
-                    microk8s kubectl apply -f ${APP_DIR}/k8s/backend.yaml
-                    microk8s kubectl apply -f ${APP_DIR}/k8s/frontend.yaml
-                    sleep 10
-                    microk8s kubectl get pods -n civicbirth-prod
-                '''
-            }
-        }
+    steps {
+        sh '''
+            export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+            docker save civicbirth-backend:latest | sudo microk8s ctr image import -
+            docker save civicbirth-frontend:latest | sudo microk8s ctr image import -
+
+            microk8s kubectl apply -f ${APP_DIR}/k8s/namespace.yaml
+            microk8s kubectl apply -f ${APP_DIR}/k8s/configmap.yaml || true
+            microk8s kubectl apply -f ${APP_DIR}/k8s/secret.yaml || true
+            microk8s kubectl apply -f ${APP_DIR}/k8s/postgres.yaml
+            microk8s kubectl apply -f ${APP_DIR}/k8s/backend.yaml
+            microk8s kubectl apply -f ${APP_DIR}/k8s/frontend.yaml
+            sleep 10
+            microk8s kubectl get pods -n civicbirth-prod
+        '''
+    }
+}
 
         stage('Smoke Test') {
             steps {
