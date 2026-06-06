@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "@testing-library/jest-dom", "vite/client"]
+  },
+  "include": ["src/**/__tests__/**", "src/**/*.spec.tsx", "src/**/*.test.tsx"]
+}
