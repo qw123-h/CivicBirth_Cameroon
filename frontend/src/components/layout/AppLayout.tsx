@@ -27,10 +27,9 @@ export default function AppLayout() {
   const location = useLocation();
 
   const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR', 'WORLD_BANK_OBSERVER'] },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },
     { path: '/registrations', icon: FileText, label: 'Birth Records', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },
     { path: '/registrations/new', icon: PlusCircle, label: 'New Registration', requiredRoles: ['NATIONAL_ADMIN', 'MUNICIPAL_REGISTRAR', 'FIELD_AGENT'] },
-    { path: '/agent-workspace', icon: Radio, label: 'Agent Tasks', requiredRoles: ['FIELD_AGENT'] },
     { path: '/certificates', icon: Award, label: 'Certificates', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },
     { path: '/analytics', icon: BarChart3, label: 'Analytics', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR', 'WORLD_BANK_OBSERVER'] },
     { path: '/agents', icon: Users, label: 'Agents', requiredRoles: ['NATIONAL_ADMIN', 'REGIONAL_OFFICER', 'MUNICIPAL_REGISTRAR', 'UNICEF_MONITOR'] },

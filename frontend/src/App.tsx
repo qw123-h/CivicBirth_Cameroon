@@ -63,7 +63,7 @@ function AppFallback() {
 function getRoleHome(role?: UserRole | string) {
   switch (role) {
     case UserRole.FIELD_AGENT:
-      return '/agent-workspace';
+      return '/registrations/new';
     case UserRole.MUNICIPAL_REGISTRAR:
       return '/registrations';
     case UserRole.REGIONAL_OFFICER:
