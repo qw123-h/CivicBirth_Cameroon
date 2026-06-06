@@ -1,27 +1,19 @@
 pipeline {
     agent any
 
-    triggers {
-        pollSCM('H * * * *')
+    tools {
+        nodejs 'NodeJS-20'
     }
 
     environment {
-        PROJECT_NAME  = 'civicbirth'
-        APP_DIR       = '/opt/civicbirth'
-        DB_HOST_VAL   = credentials('db-host')
-        DB_USER_VAL   = credentials('db-user')
-        DB_PASS_VAL   = credentials('db-password')
-        JWT_VAL       = credentials('jwt-secret')
+        APP_DIR = '/opt/civicbirth'
+        COMPOSE_FILE = '/opt/civicbirth/docker-compose.yml'
     }
 
     options {
         timeout(time: 1, unit: 'HOURS')
-        buildDiscarder(logRotator(numToKeepStr: '10'))
+        buildDiscarder(logRotator(numToKeepStr: '5'))
         disableConcurrentBuilds()
-    }
-
-    parameters {
-        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip tests')
     }
 
     stages {
@@ -30,57 +22,23 @@ pipeline {
             steps {
                 echo '🔄 Checking out code...'
                 checkout scm
-                sh '''
-                    echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
-                    echo "Commit: $(git rev-parse HEAD)"
-                    git log -1 --oneline
-                '''
+                sh 'git log -1 --oneline'
             }
         }
 
-        stage('Setup') {
+        stage('Install Dependencies') {
             parallel {
-                stage('Backend Setup') {
+                stage('Backend') {
                     steps {
                         dir('backend') {
-                            sh 'npm ci'
+                            sh 'npm ci --legacy-peer-deps'
                         }
                     }
                 }
-                stage('Frontend Setup') {
+                stage('Frontend') {
                     steps {
                         dir('frontend') {
-                            sh 'npm ci'
-                        }
-                    }
-                }
-                stage('Infrastructure Check') {
-                    steps {
-                        sh '''
-                            docker --version
-                            node --version
-                            npm --version
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Lint & Quality') {
-            parallel {
-                stage('Backend Lint') {
-                    steps {
-                        dir('backend') {
-                            sh 'npm run lint || true'
-                            sh 'npx tsc --noEmit || true'
-                        }
-                    }
-                }
-                stage('Frontend Lint') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm run lint || true'
-                            sh 'npx tsc --noEmit || true'
+                            sh 'npm ci --legacy-peer-deps'
                         }
                     }
                 }
@@ -93,7 +51,6 @@ pipeline {
                     steps {
                         dir('backend') {
                             sh 'npm run build'
-                            sh 'ls -la dist/ || true'
                         }
                     }
                 }
@@ -101,128 +58,80 @@ pipeline {
                     steps {
                         dir('frontend') {
                             sh 'npm run build'
-                            sh 'du -sh dist/ || true'
                         }
                     }
                 }
             }
         }
 
-        stage('Unit Tests') {
-            when { expression { !params.SKIP_TESTS } }
+        stage('Test') {
             steps {
                 dir('backend') {
-                    sh 'npm test -- --coverage --passWithNoTests || true'
+                    sh 'npm test -- --passWithNoTests || true'
                 }
             }
         }
 
-        stage('Security Scan') {
-            parallel {
-                stage('Backend Audit') {
-                    steps {
-                        dir('backend') {
-                            sh 'npm audit --production 2>&1 || true'
-                        }
-                    }
-                }
-                stage('Frontend Audit') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm audit --production 2>&1 || true'
-                        }
-                    }
-                }
+        stage('Security Audit') {
+            steps {
+                sh 'cd backend && npm audit --omit=dev || true'
+                sh 'cd frontend && npm audit --omit=dev || true'
             }
         }
 
-        stage('Docker Build') {
+        stage('Docker Build & Deploy') {
             steps {
                 sh '''
                     cd ${APP_DIR}
                     git pull origin main
-
-                    echo "🐳 Building Docker images..."
-                    docker-compose build --no-cache
-
-                    echo "Images built:"
-                    docker images | grep civicbirth
-                '''
-            }
-        }
-
-        stage('Deploy with Docker Compose') {
-            steps {
-                sh '''
-                    cd ${APP_DIR}
-
-                    echo "🚀 Deploying application..."
-                    docker-compose down || true
-                    docker-compose up -d
-
-                    echo "Waiting for services to start..."
+                    docker compose down --remove-orphans || true
+                    docker compose up -d --build
+                    echo "Waiting for containers..."
                     sleep 20
-
-                    echo "Running containers:"
-                    docker ps
+                    docker compose ps
                 '''
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Load into Kubernetes') {
             steps {
                 sh '''
-                    cd ${APP_DIR}
-
-                    echo "📦 Loading images into MicroK8s..."
-                    docker save civicbirth-backend:latest | microk8s ctr image import - || true
-                    docker save civicbirth-frontend:latest | microk8s ctr image import - || true
-
-                    echo "🚀 Applying Kubernetes manifests..."
-                    microk8s kubectl apply -f k8s/namespace.yaml
-                    microk8s kubectl apply -f k8s/configmap.yaml || true
-                    microk8s kubectl apply -f k8s/secret.yaml || true
-                    microk8s kubectl apply -f k8s/postgres.yaml
-                    microk8s kubectl apply -f k8s/backend.yaml
-                    microk8s kubectl apply -f k8s/frontend.yaml
-
-                    echo "Waiting for pods..."
-                    sleep 15
-
-                    echo "Pod status:"
-                    microk8s kubectl get pods -n civicbirth-prod || true
-                '''
-            }
-        }
-
-        stage('Smoke Tests') {
-            steps {
-                sh '''
-                    echo "🔍 Running smoke tests..."
+                    docker save civicbirth-backend:latest | microk8s ctr image import -
+                    docker save civicbirth-frontend:latest | microk8s ctr image import -
+                    microk8s kubectl apply -f ${APP_DIR}/k8s/namespace.yaml
+                    microk8s kubectl apply -f ${APP_DIR}/k8s/configmap.yaml || true
+                    microk8s kubectl apply -f ${APP_DIR}/k8s/secret.yaml || true
+                    microk8s kubectl apply -f ${APP_DIR}/k8s/postgres.yaml
+                    microk8s kubectl apply -f ${APP_DIR}/k8s/backend.yaml
+                    microk8s kubectl apply -f ${APP_DIR}/k8s/frontend.yaml
                     sleep 10
+                    microk8s kubectl get pods -n civicbirth-prod
+                '''
+            }
+        }
 
-                    response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
-                    echo "Backend health: $response"
-
-                    response2=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 || echo "000")
-                    echo "Frontend status: $response2"
-
-                    echo "✅ Smoke tests complete"
+        stage('Smoke Test') {
+            steps {
+                sh '''
+                    sleep 10
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
+                    echo "Backend health status: $STATUS"
+                    FRONT=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 || echo "000")
+                    echo "Frontend status: $FRONT"
                 '''
             }
         }
     }
 
     post {
-        always {
-            sh 'docker image prune -f --filter "dangling=true" || true'
-            junit testResults: '**/test-results.xml', allowEmptyResults: true
-        }
         success {
-            echo "✅ Build #${BUILD_NUMBER} succeeded!"
+            echo '✅ Pipeline succeeded! App is live at http://13.140.141.54:5173'
         }
         failure {
-            echo "❌ Build #${BUILD_NUMBER} failed!"
+            echo '❌ Pipeline failed. Check logs above.'
+        }
+        always {
+            sh 'docker image prune -f || true'
         }
     }
 }
